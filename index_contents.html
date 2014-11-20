@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
+<head>
+    <meta charset="utf-8">
+    <title>
+        CertCheck - Stay alert for MITM at schools, offices, ...
+    </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+	
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/skeleton.css">
+    <link rel="stylesheet" href="css/layout.css">
+	
+    <!--[if lt IE 9]>
+        <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+	
+    <link rel="shortcut icon" href="favicon.ico">
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="apple-touch-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="apple-touch-icon-114x114.png">
+	<style>
+	body {
+		background-color: #EEEEFF;
+	}
+	
+	.container {
+		background-color: rgba(255, 255, 255, 0.85);
+		margin-top: 10px;
+		padding-bottom: 20px;
+	}
+	
+	input[readonly="readonly"], input[readonly],
+	textarea[readonly="readonly"], textarea[readonly] {
+		background-color: #EEEEDD;
+	}
+	</style>
+    <script type="text/javascript" src="js/jquery-2.1.1.min.js"></script>
+</head>
+<body>
+<div class="container">
+    <div class="sixteen columns">
+        <h1 style="margin-top: 20px; margin-bottom: 0px; text-align: center">
+            CertCheck
+        </h1>
+		
+		<h3 style="text-align: center">
+			Stay alert for <a target="_blank"
+				href="https://en.wikipedia.org/wiki/Man-in-the-middle_attack">MITM</a> at schools, offices, ...
+		</h3>
+		
+		<hr/>
+		<noscript>
+		<h3 style="text-align: center; color: red">Javascript is required!</h3>
+		<hr/>
+		</noscript>
+    </div>
+	
+    <div class="sixteen columns">
+		<table style="width: 80%; margin-left: 10%; margin-right: 10%">
+			<tr>
+				<td width="10%">Domain</td>
+				<td><input type=text id="host" style="width: 95%" placeholder="example.com"/></td>
+				<td width="10%"><input type="button" id="send" value="Submit" style="margin-right: 25px"/></td>
+			</tr>
+			<tr>
+				<td>SHA-1</td>
+				<td colspan=2><input class=sha id=sha1 type=text style="width: 95%"/></td>
+			</tr>
+			<tr>
+				<td>SHA-256</td>
+				<td colspan=2><input class=sha id=sha256 type=text style="width: 95%"/></td>
+			</tr>
+		</table>
+		<hr/>
+	</div>
+	
+    <div class="three columns">
+		&nbsp;
+	</div>
+	
+    <div class="ten columns">
+		<h2>Explanation</h2>
+		<div style="text-align: justify">
+			<p>
+				Type a domain name to the input box and click Submit, the server will retrieve its
+				certificate and submit its fingerprints back to the browser. You should visit the
+				same domain with your browser and confirm that the fingerprints match.
+			</p>
+			
+			<p>
+				If you are on campus or office premises, mis-matching fingerprints might indicate that
+				the network provider is decrypting and re-encrypting all supposedly secure HTTPS
+				connections. They can use this for scanning your browsing habbits for forbidden content,
+				leaking of confidential information and other various purposes. This is the
+				<a href="https://en.wikipedia.org/wiki/Man-in-the-middle_attack">man-in-the-middle attack</a>.
+			</p>
+			
+			<p>
+				This site is inspired by <a href="https://www.grc.com/fingerprints.htm" target="_blank">GRC.com/fingerprints.htm</a>
+				which offers a similar service. See the site for more details on false positives, how
+				to view certificates in different browsers etc.
+			</p>
+		</div>
+	</div>
+	
+    <div class="three columns">
+		&nbsp;
+	</div>
+	<script>
+	var clear = function() {
+		$('.sha').val('');
+	};
+	
+	$(function() {
+		$('.sha').prop('readonly', true);
+		$('#host').on('input', function() {
+			clear();
+		});
+		
+		$('#send').on('click', function() {
+			clear();
+			
+			$.get('/?host=' + $('#host').val(), function (data) {
+				if ('fingerprints' in data) {
+					$('#sha1').val(data.fingerprints['SHA-1']);
+					$('#sha256').val(data.fingerprints['SHA-256']);
+				}
+				else {
+					$('.sha').val(data.message);
+				}
+			});
+		});
+	});
+	</script>
+</div>
+
+<img src="https://counter.nikonyrh.org/certcheck/index.html.gif" alt="counter"/>
+</body>
+</html>
