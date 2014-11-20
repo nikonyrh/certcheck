@@ -6,7 +6,7 @@
 <head>
     <meta charset="utf-8">
     <title>
-        CertCheck - Stay alert for MITM at schools, offices, ...
+        CertCheck - Stay alert for MITM at coffee shops, schools, offices, ...
     </title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 	
@@ -49,7 +49,8 @@
 		
 		<h3 style="text-align: center">
 			Stay alert for <a target="_blank"
-				href="https://en.wikipedia.org/wiki/Man-in-the-middle_attack">MITM</a> at schools, offices, ...
+				href="https://en.wikipedia.org/wiki/Man-in-the-middle_attack">MITM</a>
+				at coffee shops, schools, offices, ...
 		</h3>
 		
 		<hr/>
@@ -88,21 +89,24 @@
 			<p>
 				Type a domain name to the input box and click Submit, the server will retrieve its
 				certificate and submit its fingerprints back to the browser. You should visit the
-				same domain with your browser and confirm that the fingerprints match.
+				same domain with your browser and confirm that the fingerprints match. This server
+				is most likely hosted at the IP of 54.76.1.218 with a reverse DNS look-up of
+				ec2-&#8203;54-76-1-218.&#8203;eu-west-1.&#8203;compute.&#8203;amazon&#8203;aws.com
+				so it will give an indipendent view on each website's HTTPS certificate.
 			</p>
 			
 			<p>
-				If you are on campus or office premises, mis-matching fingerprints might indicate that
-				the network provider is decrypting and re-encrypting all supposedly secure HTTPS
-				connections. They can use this for scanning your browsing habbits for forbidden content,
+				If you are at a coffee shop, on campus or office premises, mis-matching fingerprints
+				might indicate that the network provider is decrypting and re-encrypting all supposedly secure
+				HTTPS connections. They can use this for scanning your browsing habbits for forbidden content,
 				leaking of confidential information and other various purposes. This is the
 				<a href="https://en.wikipedia.org/wiki/Man-in-the-middle_attack">man-in-the-middle attack</a>.
 			</p>
 			
 			<p>
-				This site is inspired by <a href="https://www.grc.com/fingerprints.htm" target="_blank">GRC.com/fingerprints.htm</a>
-				which offers a similar service. See the site for more details on false positives, how
-				to view certificates in different browsers etc.
+				This site is inspired by <a href="https://www.grc.com/fingerprints.htm" target="_blank">
+				GRC.com/fingerprints.htm</a> which offers a similar service. See the site for more details
+				on false positives, how to view certificates in different browsers etc.
 			</p>
 		</div>
 	</div>
@@ -111,29 +115,29 @@
 		&nbsp;
 	</div>
 	<script>
-	var clear = function() {
-		$('.sha').val('');
+	var clear = function(content) {
+		$('.sha').val(content ? content : '');
+	};
+	
+	var reload = function() {
+		clear('Loading...');
+		
+		$.get('/?host=' + $('#host').val(), function (data) {
+			if ('fingerprints' in data) {
+				$('#sha1').val(data.fingerprints['SHA-1']);
+				$('#sha256').val(data.fingerprints['SHA-256']);
+			}
+			else {
+				$('.sha').val(data.message);
+			}
+		});
 	};
 	
 	$(function() {
 		$('.sha').prop('readonly', true);
-		$('#host').on('input', function() {
-			clear();
-		});
-		
-		$('#send').on('click', function() {
-			clear();
-			
-			$.get('/?host=' + $('#host').val(), function (data) {
-				if ('fingerprints' in data) {
-					$('#sha1').val(data.fingerprints['SHA-1']);
-					$('#sha256').val(data.fingerprints['SHA-256']);
-				}
-				else {
-					$('.sha').val(data.message);
-				}
-			});
-		});
+		$('#host').keyup(function(e){ if (e.keyCode == 13) reload(); });
+		$('#host').bind('enterKey', reload);
+		$('#send').on('click', reload);
 	});
 	</script>
 </div>
