@@ -1,32 +1,49 @@
 <?php
+if (!isset($_GET['host'])) {
+	readfile('index_contents.html');
+	die();
+}
+
+$hash = function ($str, $alg) { return strtoupper(hash($alg, $str, false)); };
 $json = function($result) {
 	header('Content-Type: application/json');
 	die(json_encode($result));
 };
 
-$hash = function ($str, $alg) { return hash($alg, $str, false); };
+$words = apc_fetch('certcheck::words');
+if (!$words) {
+	$words = array_map("trim", file('words.txt'));
+	apc_store('certcheck::words', $words, 24*60*60);
+}
 
-$thumbprints = function($cert) use ($hash) {
+$thumbprints = function($cert) use ($hash, $words) {
 	$cert = preg_split('/\-+(BEGIN|END) CERTIFICATE\-+/', $cert);
 	$cert = base64_decode(str_replace(array("\n\r","\n","\r"), '', $cert[1]));
 	
 	$format = function ($cert) {
-		return rtrim(chunk_split(strtoupper($cert), 2, ':'), ':');
+		return rtrim(chunk_split($cert, 2, ':'), ':');
+	};
+	
+	$sha1   = $hash($cert, 'sha1');
+	$sha256 = $hash($cert, 'sha256');
+	
+	$wordHash = explode(' ', chunk_split($hash("$sha1/$sha256", 'sha256'), 3, ' '));
+	$word     = function ($i) use ($words, $wordHash) {
+		return $words[hexdec($wordHash[$i]) % sizeof($words)];
 	};
 	
 	return array(
-		'SHA-1'   => $format($hash($cert, 'sha1')),
-		'SHA-256' => $format($hash($cert, 'sha256'))
+		'SHA-1'   => $format($sha1),
+		'SHA-256' => $format($sha256),
+		'WORDS'   => implode(', ', array_map($word, range(0, 6)))
 	);
 };
 
-if (!isset($_GET['host'])) {
-	die(file_get_contents('index_contents.html'));
-}
-
-$host = strtolower($_GET['host']);
-$host = preg_replace('_^([a-z]+://)?([^/]+).*_', '\2', $host);
 $cert = null;
+$host = strtolower($_GET['host']);
+
+// Remove the possible protocol section and anything after "/"
+$host = preg_replace('_^([a-z]+://)?([^/]+).*_', '\2', $host);
 
 if (!preg_match('/.\.[a-z0-9]{1,}$/', $host)) {
 	$json(array(
@@ -35,11 +52,12 @@ if (!preg_match('/.\.[a-z0-9]{1,}$/', $host)) {
 	));
 }
 
-$response = isset($_GET['nocache']) ? null : apc_fetch($host);
+$cacheKey = "certcheck::$host";
+$response = isset($_GET['nocache']) ? null : apc_fetch($cacheKey);
 
 if (!$response) {
 	if ($fp = tmpfile()) {
-		// http://stackoverflow.com/a/3817143/3731823
+		// Based on http://stackoverflow.com/a/3817143/3731823
 		$ch = curl_init();
 		curl_setopt($ch, CURLOPT_URL,"https://$host");
 		curl_setopt($ch, CURLOPT_STDERR, $fp);
@@ -78,7 +96,7 @@ if (!$response) {
 		'response'     => preg_split('/[\r\n]+/', trim($response))
 	);
 	
-	apc_store($host, $response, 15*60); // 15 min
+	apc_store($cacheKey, $response, 15*60); // 15 min
 	$response['cached'] = false;
 }
 else {
@@ -86,5 +104,4 @@ else {
 }
 
 $response['now'] = date(DATE_ATOM);
-
 $json($response);

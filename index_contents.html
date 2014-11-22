@@ -75,6 +75,10 @@
 				<td>SHA-256</td>
 				<td colspan=2><input class=sha id=sha256 type=text style="width: 95%"/></td>
 			</tr>
+			<tr>
+				<td>WORDS</td>
+				<td colspan=2><input class=sha id=words type=text style="width: 95%"/></td>
+			</tr>
 		</table>
 		<hr/>
 	</div>
@@ -96,17 +100,27 @@
 			</p>
 			
 			<p>
-				If you are at a coffee shop, on campus or office premises, mis-matching fingerprints
-				might indicate that the network provider is decrypting and re-encrypting all supposedly secure
-				HTTPS connections. They can use this for scanning your browsing habbits for forbidden content,
-				leaking of confidential information and other various purposes. This is the
-				<a href="https://en.wikipedia.org/wiki/Man-in-the-middle_attack">man-in-the-middle attack</a>.
+				WORDS list is generated based on the fingerprints and words are pseudo-randomly
+				selected from a list of 1000 English adjectives. Thus the probability of seeing
+				same six words is a one-in-a-billion chance. These could be memoized and re-checked
+				later to see if the certificate has changed. Actually ideally the server would remember
+				earlier hashes and report noticed changes directly to the client.
 			</p>
 			
 			<p>
-				This site is inspired by <a href="https://www.grc.com/fingerprints.htm" target="_blank">
-				GRC.com/fingerprints.htm</a> which offers a similar service. See the site for more details
-				on false positives, how to view certificates in different browsers etc.
+				If you are at a coffee shop, on campus or office premises, mis-matching fingerprints
+				might indicate that the network provider is decrypting and re-encrypting all supposedly
+				secure HTTPS connections. They can use this for scanning your browsing habbits for
+				forbidden content, leaking of confidential information and other various purposes.
+				This is the <a href="https://en.wikipedia.org/wiki/Man-in-the-middle_attack">
+				man-in-the-middle attack</a>. This site is inspired by <a href="https://www.grc.com/fingerprints.htm"
+				target="_blank"> GRC.com/fingerprints.htm</a> which offers a similar service. See the
+				site for more details on false positives, how to view certificates in different browsers etc.
+			</p>
+			
+			<p>
+				Source code is available at GitHub (<a target="_blank"
+				href="https://github.com/nikonyrh/certcheck">nikonyrh/certcheck</a>).
 			</p>
 		</div>
 	</div>
@@ -126,6 +140,7 @@
 			if ('fingerprints' in data) {
 				$('#sha1').val(data.fingerprints['SHA-1']);
 				$('#sha256').val(data.fingerprints['SHA-256']);
+				$('#words').val(data.fingerprints['WORDS']);
 			}
 			else {
 				$('.sha').val(data.message);
@@ -142,6 +157,6 @@
 	</script>
 </div>
 
-<img src="https://counter.nikonyrh.org/certcheck/index.html.gif" alt="counter"/>
+<img src="https://counter.nikonyrh.org/certcheck/index.html.gif" alt=""/>
 </body>
 </html>
