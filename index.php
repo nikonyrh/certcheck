@@ -56,28 +56,50 @@ $cacheKey = "certcheck::$host";
 $response = isset($_GET['nocache']) ? null : apc_fetch($cacheKey);
 
 if (!$response) {
+	$errno  = null;
+	$errMsg = null;
+	
 	if ($fp = tmpfile()) {
-		// Based on http://stackoverflow.com/a/3817143/3731823
-		$ch = curl_init();
-		curl_setopt($ch, CURLOPT_URL,"https://$host");
-		curl_setopt($ch, CURLOPT_STDERR, $fp);
-		curl_setopt($ch, CURLOPT_CERTINFO, 1);
-		curl_setopt($ch, CURLOPT_VERBOSE, 1);
-		curl_setopt($ch, CURLOPT_HEADER, 1);
-		curl_setopt($ch, CURLOPT_NOBODY, 1);
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-		//curl_setopt($ch, CURLOPT_SSLVERSION, 3);
-		curl_setopt($ch, CURLOPT_SSLVERSION, 4);
-		$response = curl_exec($ch);
-		
-		if (curl_errno($ch)) {
-			$json(array(
-				'error'   => true,
-				'errno'   => curl_errno($ch),
-				'message' => curl_error($ch)
-			));
+		for ($iter = 0; $iter <= 1; ++$iter) {
+			// First try with all validations in place
+			$secureMode = $iter == 0;
+			
+			// Based on http://stackoverflow.com/a/3817143/3731823
+			$ch = curl_init();
+			curl_setopt($ch, CURLOPT_URL,"https://$host");
+			curl_setopt($ch, CURLOPT_STDERR, $fp);
+			curl_setopt($ch, CURLOPT_CERTINFO, 1);
+			curl_setopt($ch, CURLOPT_VERBOSE, 1);
+			curl_setopt($ch, CURLOPT_HEADER, 1);
+			curl_setopt($ch, CURLOPT_NOBODY, 1);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+			curl_setopt($ch, CURLOPT_SSLVERSION, 4);
+			
+			// If we fail, try again and ignore some security issues
+			curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $secureMode ? 2 : false);
+			curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $secureMode);
+			
+			$response = curl_exec($ch);
+			
+			if (curl_errno($ch)) {
+				// These are possibly used when generating the response
+				$errno  = curl_errno($ch);
+				$errMsg = explode("\n", curl_error($ch));
+				
+				if ($iter == 0) {
+					// Let's try again with less security
+					continue;
+				}
+				
+				$json(array(
+					'validity' => array(
+						'error'   => true,
+						'errno'   => $errno,
+						'message' => $errMsg
+					)
+				));
+			}
+			break;
 		}
 		
 		fseek($fp, 0);//rewind
@@ -91,10 +113,18 @@ if (!$response) {
 	
 	$response = array(
 		'host'         => $host,
+		'validity'     => array(
+			'error' => $iter == 1
+		),
 		'fingerprints' => $thumbprints($cert),
 		'retrieved'    => date(DATE_ATOM),
 		'response'     => preg_split('/[\r\n]+/', trim($response))
 	);
+	
+	if (!empty($errno)) {
+		$response['validity']['errno']   = $errno;
+		$response['validity']['message'] = $errMsg;
+	}
 	
 	apc_store($cacheKey, $response, 15*60); // 15 min
 	$response['cached'] = false;

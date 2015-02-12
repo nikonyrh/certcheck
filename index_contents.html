@@ -37,6 +37,15 @@
 	textarea[readonly="readonly"], textarea[readonly] {
 		background-color: #EEEEDD;
 	}
+	
+	tr.certValid {
+		display: none;
+	}
+	
+	tr.certInvalid td {
+		padding:          0.5em;
+		background-color: #FFDDCC;
+	}
 	</style>
     <script type="text/javascript" src="js/jquery-2.1.1.min.js"></script>
 </head>
@@ -78,6 +87,15 @@
 			<tr>
 				<td>WORDS</td>
 				<td colspan=2><input class=sha id=words type=text style="width: 95%"/></td>
+			</tr>
+			<tr id=certValidityRow class=certValid>
+				<td colspan=3 align=middle>
+					<h4>Error when validating the certificate!</h4>
+					<span id=errorSpan></span>
+					<br/>
+					Some details on PHP and cURL can be found
+					<a href="http://ademar.name/blog/2006/04/curl-ssl-certificate-problem-v.html" target="_blank">here</a>.
+				</td>
 			</tr>
 		</table>
 		<hr/>
@@ -130,6 +148,7 @@
 	</div>
 	<script>
 	var clear = function(content) {
+		$('#errorSpan').text('');
 		$('.sha').val(content ? content : '');
 	};
 	
@@ -141,17 +160,32 @@
 				$('#sha1').val(data.fingerprints['SHA-1']);
 				$('#sha256').val(data.fingerprints['SHA-256']);
 				$('#words').val(data.fingerprints['WORDS']);
+				
+				$('#certValidityRow').removeClass();
+				
+				if (data.validity.error) {
+					$('#certValidityRow').addClass('certInvalid');
+					$('#errorSpan').text(
+						'Error ' + data.validity.errno + ': ' +
+						data.validity.message.join(' ')
+					);
+				}
+				else {
+					$('#certValidityRow').addClass('certValid');
+				}
+			}
+			else if ('validity' in data && 'message' in data['validity']) {
+				clear(data.validity.message);
 			}
 			else {
-				$('.sha').val(data.message);
+				clear("Invalid response from server!");
 			}
 		});
 	};
 	
 	$(function() {
 		$('.sha').prop('readonly', true);
-		$('#host').keyup(function(e){ if (e.keyCode == 13) reload(); });
-		$('#host').bind('enterKey', reload);
+		$('#host').keyup(function(e) { if (e.keyCode == 13) reload(); });
 		$('#send').on('click', reload);
 	});
 	</script>
